@@ -55,7 +55,7 @@ goals_achieved([FirstGoal | RestGoals], State) :-
 %sprawdzenie czy pojedynczy cel zostal spelniony
 goal_achieved( clear(X), State ) :-  
    contains( State, clear(X) ).
-goal_achieved( clear(X/Y), State) :-
+goal_achieved( clear(X/Y), State) :- 
    at_least_one_non_var(X,Y),
    goal_achieved(Y, State),
    contains( State, clear(X)).
@@ -92,9 +92,9 @@ goal_achieved( diff(X,Y), _) :-
    X \= Y.
 
 %sprawdzenie czy przynajmniej jeden z dwóch argumentów został zainicjowany
-at_least_one_non_var(X, _) :- !,
+at_least_one_non_var(X, _) :- 
    nonvar(X).
-at_least_one_non_var(_, Y) :- !,
+at_least_one_non_var(_, Y) :- 
    nonvar(Y).
 
 choose_goal( Goal, [Goal | RestGoals], RestGoals, InitState ) :- 
@@ -105,14 +105,18 @@ choose_goal( Goal, [ FirstGoal | RestGoals], [FirstGoal | OutRestGoals], InitSta
 achieves( on(X,Y), move(X, Z/on(X, Z), Y )). 
 achieves( clear(T), move(X/on(X,T), T, _)).
 
-requires( move(X, Y, Z), [clear(X), clear(Z)], []) :-  
-   has_no_conditions(X),
-   has_no_conditions(Y), !.
 requires( move(X/on(X, Y), Y, Z), [clear(X/on(X, Y))], [clear(Z), diff( Z, X/on(X,Y))]).
 requires( move(X, Y/on(X,Y), Z), [ clear(X), clear(Z) ], [on(X,Y)]).
 
-% Wyrazenie w argumencie nie ma drugiego członu po znaku operatorze /
-has_no_conditions(X) :- var(X).
-has_no_conditions(_/_) :-!, fail.
-has_no_conditions(_).
+inst_action(move(X,Y,Z), Conditions, State1, move(X1,Y1,Z)):-
+   goals_achieved(Conditions, State1).
+   remove_condition(X, X1),
+   remove_condition(Y, Y1).
+
+perform_action(State1, move(X, Y, Z), [on(X,Z), clear(Y) | State2] ) :-
+   remove( on(X,Y), State1, TempState),
+   remove( clear(Z), TempState, State2 ).
+
+remove_condition(X, X) :- X \= _\_.
+remove_condition(X/Y, X).
 

@@ -1,0 +1,36 @@
+Podsumowanie sprawdzeń
+We State zawsz jest wszystko poinstancjowane
+We goals_achieved wśród Goals nie jest przez co czasami po wyjściu niektóre rzeczy stają się instantedo
+
+w celu on(X, Y) tylko Y moze miec forme Y/Z
+
+w funkcji choose_goal wybieramy niespełniony cel, bo chcemy osiągnąc sytuacje jak plan wywoływany jest tylko ze spełnionymi goalami. Wtedy wykona sie pierwsza klauzula plan.
+
+1. diff - pierwszy jest ukonkretniony
+2. Warunki do goal_achieved 
+	. clear( unkonkretniony)
+	clear(struktura)
+	on( ukon, ukon).
+
+  at_least_one_non_var na !=
+ skrócić choose_goal 
+
+w move( x/X, b3) to X to jest do preplanu i wcześniej jest ukonkretnione niż to co jest później??
+Ograniczanie długości - wymusić szukanie wszerz. Przeszukiwanie w głąd z inkrementacyjnym zwiększaniem - w ramach zadanego ograniczenia sprawdzić wszystkie możliwości.
+W kroku rekurancyjnym miejsca wyboru
+	1. Wybiera cel z listy celów.
+	2. W ramach instantiate_action - Ukonkretniamy, więc jest wybór miejsca do odłożenia klocka
+
+Do ograniczania - do plan dodajemy 2 arg - licznik i MaxLicznik
+Sprawdzamy czy  Licznik = MaxLicznik zaraz po wejściu do Plan.
+Dodać taki generator limitu który będzie w funkcji co w kolejnych krokach wchodzi do plan.
+Generator generuje od 1 do N, stopniowo zwiększane ograniczenia
+Napisać procedure niedeterministycznego generowania liczby z min do max
+Są dwie odnogi proc plan - i trzeba tak robić, żeby Limit wystarczył na oba - 
+część limit wykorzystana jest w części 1 a reszta w cześci 2. 
+
+Osiąganie celów g2, g3, g3 ma nie niszczyć celu g1.  Np g1 - clear(b3) a robiąc g3 ustawiamy b1 na b3.
+"Goal protection"
+Dodatkowy argument w procedurze plan - achieved goals.
+Po procedurze PerformAction wstawić cel do achievedGoals.
+Perform action zamim wykona akcje żadnego celu nei niszczy

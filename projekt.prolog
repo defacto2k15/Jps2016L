@@ -18,18 +18,21 @@
 %   State2 -- stan pośredni 2, osiągany po wykonaniu akcji
 %   w stanie -- pośrednim 1
 %   PostPlan -- skonstruowany postplan
+%   AchievedGoals - cele jak na razie osiągnięte, których nie należy niszczyć
+plan(State, Goals, Plan, FinalState) :-
+   plan(State, Goals, Plan, FinalState, []).
 
-plan(State, Goals, [], State) :-
+plan(State, Goals, [], State, _) :-
    goals_achieved(Goals, State) .
 
-plan(InitState, Goals, Plan, FinalState) :-
+plan(InitState, Goals, Plan, FinalState, AchievedGoals) :-
    choose_goal(Goal, Goals, RestGoals, InitState),
    achieves( Goal, Action),
    requires(Action, CondGoals, Conditions),
-   plan(InitState, CondGoals, PrePlan, State1),
+   plan(InitState, CondGoals, PrePlan, State1, AchievedGoals),
    inst_action(Action, Conditions,State1, InstAction),
-   perform_action(State1, InstAction, State2),
-   plan(State2, RestGoals, PostPlan, FinalState),
+   perform_action(State1, InstAction, State2, AchievedGoals),
+   plan(State2, RestGoals, PostPlan, FinalState, [Goal | AchievedGoals]),
    conc(PrePlan, [ InstAction | PostPlan ], Plan) .
 
 % procedura pomocnicza do konkatenacji listy
@@ -39,6 +42,11 @@ conc( [X|L1], L2, [X|L3]) :-
 
 % procedura pomocnicza contains(Elem, Lista) - sprawdza czy Elem znajduje się w Lista
 contains( Lista, Elem) :- conc(_, [Elem|_], Lista).
+
+containsAny( ListToSearchiInto, [Elem|_]) :-
+   contains( ListToSearchiInto, Elem).
+containsAny( ListToSearchiInto, [_|Rest]) :-
+   containsAny(ListToSearchiInto, Rest).
 
 initState( [ on(b4, p1), on(b1, b4), on(b3, b1), on(b2, p3),
   clear(b3), clear(b2), clear(p2), clear(p4)]).
@@ -109,14 +117,20 @@ requires( move(X/on(X, Y), Y, Z), [clear(X/on(X, Y))], [clear(Z), diff( Z, X/on(
 requires( move(X, Y/on(X,Y), Z), [ clear(X), clear(Z) ], [on(X,Y)]).
 
 inst_action(move(X,Y,Z), Conditions, State1, move(X1,Y1,Z)):-
-   goals_achieved(Conditions, State1).
+   goals_achieved(Conditions, State1),
    remove_condition(X, X1),
    remove_condition(Y, Y1).
 
-perform_action(State1, move(X, Y, Z), [on(X,Z), clear(Y) | State2] ) :-
+remove_condition(X, X) :- X \= _/_ .
+remove_condition(X/_, X).
+
+perform_action(State1, move(X, Y, Z), [on(X,Z), clear(Y) | State2], AchievedGoals ) :-
+   not( containsAny(AchievedGoals, [on(X,Y), clear(Z)])),
    remove( on(X,Y), State1, TempState),
    remove( clear(Z), TempState, State2 ).
 
-remove_condition(X, X) :- X \= _\_.
-remove_condition(X/Y, X).
+remove( Elem, InList, OutList ):-
+   conc(Start, [Elem|End], InList),
+   conc(Start, End, OutList).
+
 

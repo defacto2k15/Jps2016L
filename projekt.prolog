@@ -58,6 +58,18 @@ initState( [ on(b4, p1), on(b1, b4), on(b3, b1), on(b2, p3),
   clear(b3), clear(b2), clear(p2), clear(p4)]).
 goals( [ on(b3,b2), on(b1,b3)]).
 
+gList( [ [on(b3, b2), on(b2, b1)],
+[clear(p1), clear(p2), clear(p2)],
+[clear(b1), clear(b2), clear(b3), clear(b4)],
+[on(b1,b4), on(b2,b3), clear(b2)],
+[clear(b1), clear(p1)],
+[on(b1,b2), clear(p3), clear(p4)]]).
+testX( [Case | OtherCases] ) :-
+   initState(InitState),
+   plan(InitState, Case, 10, _, _),
+   write('PLAN'),nl,
+   testX(OtherCases).
+testX([]).
   
 %przykladowe zapytanie: initState( InitState), goals( Goals), plan(InitState), Goals, Plam, FinalState).
 
@@ -80,30 +92,12 @@ goal_achieved( on(X, Y/Z), State) :-
    at_least_one_non_var(Y, Z), !,
    goal_achieved(Z, State),
    contains(State, on(X,Y)).
-goal_achieved( on(X/Y,Z), State) :-
-   at_least_one_non_var(X, Y), !,
-   goal_achieved(Y, State),
-   contains(State, on(X,Z)).
-
-goal_achieved(diff(X/Z, Y/W), State) :- 
-   at_least_one_non_var(X,Z),
-   at_least_one_non_var(Y,W), !,
-   goal_achieved( Z, State), 
-   goal_achieved( W, State),
-   X \= Y.
 
 goal_achieved(diff(X, Y/W), State) :- 
    at_least_one_non_var(Y,W), !,
    goal_achieved( W, State),
    X \= Y.
 
-goal_achieved(diff(X/Z, Y), State) :-  
-   at_least_one_non_var(X,Z), !,
-   goal_achieved( Z, State), 
-   X \= Y.
-
-goal_achieved( diff(X,Y), _) :-
-   X \= Y.
 
 %sprawdzenie czy przynajmniej jeden z dwóch argumentów został zainicjowany
 at_least_one_non_var(X, _) :- 

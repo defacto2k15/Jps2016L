@@ -19,21 +19,27 @@
 %   w stanie -- pośrednim 1
 %   PostPlan -- skonstruowany postplan
 %   AchievedGoals - cele jak na razie osiągnięte, których nie należy niszczyć
-plan(State, Goals, Plan, FinalState) :-
-   plan(State, Goals, Plan, FinalState, []).
 
-plan(State, Goals, [], State, _) :-
+
+plan(State, Goals, Limit, Plan, FinalState ) :-
+   plan(State, Goals,[], Limit, Plan, FinalState).
+
+plan(State, Goals, _, _, [], State ) :-
    goals_achieved(Goals, State) .
 
-plan(InitState, Goals, Plan, FinalState, AchievedGoals) :-
+plan(InitState, Goals, AchievedGoals, Limit, Plan, FinalState) :-
+   generateLimit(LimitPre, Limit),
    choose_goal(Goal, Goals, RestGoals, InitState),
    achieves( Goal, Action),
    requires(Action, CondGoals, Conditions),
-   plan(InitState, CondGoals, PrePlan, State1, AchievedGoals),
+   plan(InitState, CondGoals, AchievedGoals, LimitPre, PrePlan, State1),
    inst_action(Action, Conditions,State1, InstAction),
-   perform_action(State1, InstAction, State2, AchievedGoals),
-   plan(State2, RestGoals, PostPlan, FinalState, [Goal | AchievedGoals]),
+   check_action(InstAction, AchievedGoals),
+   perform_action(State1, InstAction, State2),
+   LimitPost is Limit - LimitPre - 1,
+   plan(State2, RestGoals, [Goal | AchievedGoals], LimitPost, PostPlan, FinalState  ),
    conc(PrePlan, [ InstAction | PostPlan ], Plan) .
+
 
 % procedura pomocnicza do konkatenacji listy
 conc([], L, L).
@@ -124,13 +130,22 @@ inst_action(move(X,Y,Z), Conditions, State1, move(X1,Y1,Z)):-
 remove_condition(X, X) :- X \= _/_ .
 remove_condition(X/_, X).
 
-perform_action(State1, move(X, Y, Z), [on(X,Z), clear(Y) | State2], AchievedGoals ) :-
-   not( containsAny(AchievedGoals, [on(X,Y), clear(Z)])),
+perform_action(State1, move(X, Y, Z), [on(X,Z), clear(Y) | State2]) :-
    remove( on(X,Y), State1, TempState),
    remove( clear(Z), TempState, State2 ).
+
+check_action( move(X,Y,Z), AchievedGoals):-
+   not( containsAny(AchievedGoals, [on(X,Y), clear(Z)])).
 
 remove( Elem, InList, OutList ):-
    conc(Start, [Elem|End], InList),
    conc(Start, End, OutList).
 
-
+% procedura pomocnicza generujaca niedeterministycznie wartosci (1-szy arg) z zakresu <0-MAX)
+generateLimit(X, Max):-
+   Max > 0,   
+   X is Max - 1.
+generateLimit(X, Max):-
+   Max > 0,
+   NewMax is Max - 1,
+   generateLimit(X, NewMax).

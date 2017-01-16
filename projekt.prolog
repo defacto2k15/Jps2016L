@@ -21,24 +21,51 @@
 %   AchievedGoals - cele jak na razie osiągnięte, których nie należy niszczyć
 
 
-plan(State, Goals, Limit, Plan, FinalState ) :-
-   plan(State, Goals,[], Limit, Plan, FinalState).
 
-plan(State, Goals, _, _, [], State ) :-
-   goals_achieved(Goals, State) .
+plan(State, Goals, _,  [], State, Level ) :-
+   goals_achieved(Goals, State) ,
+   writeInLine(Level, ['Cele ', Goals, ' są spełnione już w obecnym stanie, ', State, ' nie ma potrzeby tworzyć planu']).
 
-plan(InitState, Goals, AchievedGoals, Limit, Plan, FinalState) :-
+plan(InitState, Goals, Limit, Plan, FinalState, Level) :-
    Limit > 0,
-   generate_limit(LimitPre, Limit),
-   choose_goal(Goal, Goals, RestGoals, InitState),
+   writeInLine(Level, ['Wywyołana procedura plan z argumentami: ']),
+   writeInLine(Level+2,[ 'Stan początkowy = ',InitState]),
+   writeInLine(Level+2,[ 'Goals = ',Goals ]),
+   writeInLine(Level+2,[ 'Limit = ', Limit ]),
+   writeInLine(Level+2,[ 'Plan = ', Plan]),
+   writeInLine(Level+2,[ 'FinalState = ', FinalState]),
+
+   writeInLine(Level+2, ['Wybieramy cel z listy ',Goals]), 
+   askUserToChoose( x(XGoal, XRestGoals), choose_goal(XGoal, Goals,XRestGoals, InitState), x(Goal, RestGoals), Level+2),
+   writeInLine(Level+2, ['Wybrany cel ', Goal ]),
+
    achieves( Goal, Action),
+   writeInLine(Level+2, ['Aby wykonać cel ',Goal,' Należy wykonać akcję ', Action]),
+
    requires(Action, CondGoals, Conditions),
-   plan(InitState, CondGoals, AchievedGoals, LimitPre, PrePlan, State1),
+   writeInLine(Level+2, ['Wykonanie tej akcji wymaga spełnienia warunku ',Conditions,' oraz celów ',CondGoals]),
+
+   %generate_limit(0, Limit, LimitPre),
+    
+   writeInLine(Level+2, ['Próba ustalenia preplanu']),
+   plan(InitState, CondGoals, 100, PrePlan, State1, Level+4),
+   writeInLine(Level+2, ['Wyjściowy preplan: ',PrePlan,' stan po wykonaniu preplanu ',State1]),
+
    inst_action(Action, Conditions,State1, InstAction),
-   check_action(InstAction, AchievedGoals),
+   writeInLine(Level+2, ['Zainicjowana akcja: ', InstAction]),
+
    perform_action(State1, InstAction, State2),
-   LimitPost is Limit - LimitPre - 1,
-   plan(State2, RestGoals, [Goal | AchievedGoals], LimitPost, PostPlan, FinalState  ),
+   writeInLine(Level+2, ['Po wykonaniu akcji stan jest równy ',State2]),
+   
+   %   LimitPost is Limit - LimitPre - 1,
+   writeInLine(Level+2, ['Próba ustalenia postplanu']),
+   plan(State2, RestGoals,  100, PostPlan, FinalState, Level+4 ),
+   writeInLine(Level+2, ['Wyjściowy postplan: ',PostPlan,' stan końcowy: ', FinalState]),
+
+   writeInLine(Level+2, ['Sprawdzamy czy w stanie końcowym znajduje się cel',Goal]),
+   checkIsSuccessCall( contains( FinalState),Goal, Level),
+   writeInLine(Level+2, 'CONTAINS!!!!!'),
+
    conc(PrePlan, [ InstAction | PostPlan ], Plan) .
 
 
@@ -50,15 +77,11 @@ conc( [X|L1], L2, [X|L3]) :-
 % procedura pomocnicza contains(Elem, Lista) - sprawdza czy Elem znajduje się w Lista
 contains( Lista, Elem) :- conc(_, [Elem|_], Lista).
 
-containsAny( ListToSearchiInto, [Elem|_]) :-
-   contains( ListToSearchiInto, Elem).
-containsAny( ListToSearchiInto, [_|Rest]) :-
-   containsAny(ListToSearchiInto, Rest).
-
 remove( Elem, InList, OutList ):-
    conc(Start, [Elem|End], InList),
    conc(Start, End, OutList).
 
+  
 %przykladowe zapytanie: initState( InitState), goals( Goals), plan(InitState), Goals, Plam, FinalState).
 
 goals_achieved([], _).
@@ -114,15 +137,88 @@ perform_action(State1, move(X, Y, Z), [on(X,Z), clear(Y) | State2]) :-
    remove( clear(Z), TempState, State2 ).
 
 check_action( move(X,Y,Z), AchievedGoals):-
-   not( containsAny(AchievedGoals, [on(X,Y), clear(Z)])).
-
+   not( contains(AchievedGoals, clear(Z))),
+   not( contains(AchievedGoals, on(X,Y))).
 
 % procedura pomocnicza generujaca niedeterministycznie wartosci (1-szy arg) z zakresu <0-MAX)
-generate_limit(X, Max):-
-   Max > 0,   
-   X is Max - 1.
+generate_limit(Curr, Max, Curr):-
+   Curr < Max.
+generate_limit(Curr, Max, Res):-
+   Curr < Max,
+   NewCurr is Curr + 1,
+   generate_limit(NewCurr, Max, Res).
 
-generate_limit(X, Max):-
-   Max > 0,
-   NewMax is Max - 1,
-   generate_limit(X, NewMax).
+
+initState( [ on(b4, p1), on(b1, b4), on(b3, b1), on(b2, p3),
+    clear(b3), clear(b2), clear(p2), clear(p4)]).
+goals( [ on(b3,b2), on(b1,b3)]).
+
+writeInLine( []) :- nl.
+writeInLine( [Elem|Rest]) :-
+   writeOneElement(Elem), write(' '), writeInLine(Rest).
+writeInLine(N, Arr) :- 
+  not( var(N)), !, Number is  N*2, tab(Number), writeInLine(Arr).
+
+writeOneElement( Elem ) :-
+   var(Elem), !, write('!Niezwiązana!').
+writeOneElement( Elem ) :- write(Elem).
+
+
+askUserToChoose( InputVariables, Function, OutVariable, Level ) :-
+   findall( InputVariables, Function, PossibilitiesList),
+   include(canBeAssigned(OutVariable), PossibilitiesList, AssignableList),
+   assertIsNotEmpty( AssignableList, Level),
+   writeInLine( Level, ['Wszystkie  możliwe przypisania do wartości wyjściowej']),
+   writePosibilitiesToScreen( AssignableList, 1 , Level),
+   askUserToChoose2( AssignableList, Level, SelectedElement),
+   OutVariable = SelectedElement.
+
+assertIsNotEmpty([], Level) :- !,
+   writeInLine(Level, ['Lista pusta, nie można przypisać, NAWRÓT']), fail.
+assertIsNotEmpty(_, _).
+
+askUserToChoose2( [], Level, _) :-!,
+   writeInLine(Level, ['Nie można znaleźć poprawnego przypisania. Nawrót']), fail.
+askUserToChoose2( [OnlyElem | [] ], Level, OnlyElem) :-!,
+   writeInLine(Level, ['Jest tylko jedna możliwość "', OnlyElem, '" więc jest wybrana.']).
+askUserToChoose2( PossibilitiesList, Level, SelectedElement) :-
+   length(PossibilitiesList, ListLength),
+   getUserInput(ListLength, SelectedIndex, Level),
+   From0Index is SelectedIndex - 1,
+   nth0(From0Index, PossibilitiesList, SelectedElement).
+askUserToChoose2( [PosFirst | PosRest], Level, SelElem):-
+   write('QWEQWEQWEQWEQWEQWEQWEQWE'), fail.
+
+writePosibilitiesToScreen([], _, _).
+writePosibilitiesToScreen( [First|Rest], Index, Level ) :-
+   IndexNum is Index,
+   writeInLine(Level,['[',IndexNum,'] = ', First]),
+   writePosibilitiesToScreen( Rest, Index+1, Level).
+
+getUserInput( ListLength, SelectedElement, Level) :-
+   writeInLine(Level, ['Podaj indeks wybranego elementu: ']),
+   read(X), assertInputIsGood( ListLength, SelectedElement,X, Level).
+
+assertInputIsGood( ListLength, InElem, InElem, _) :-
+   number(InElem),
+   InElem >= 1,
+   InElem =< ListLength,!.
+
+assertInputIsGood( ListLength, SelectedElement, InElem, Level) :- % gdy user podał zła liczbę
+   writeInLine(Level, ['Podany indeks ', InElem, ' Jest zły. Musi być pomiędzy 1 a ', ListLength]),
+   getUserInput( ListLength, SelectedElement, Level).
+
+selOne( [Out | _] , Out).
+selOne( [_| Rest], Out ) :-
+   selOne( Rest, Out).
+
+canBeAssigned(X, Y):-
+   not( internalCanBeAssigned(X, Y) ).
+internalCanBeAssigned( X, X) :- !, fail.
+internalCanBeAssigned(_, _ ). 
+
+
+checkIsSuccessCall( Func, Arg, _ ) :-
+   call(Func, Arg), !.
+checkIsSuccessCall(_, _ , Level) :-
+   writeInLine( Level, ['Nie można. NAWRÓT']).

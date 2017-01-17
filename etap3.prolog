@@ -21,8 +21,8 @@
 %   AchievedGoals - cele jak na razie osiągnięte, których nie należy niszczyć
 
 
-plan(State, Goals, Limit, Plan, FinalState, Level ) :-
-   plan(State, Goals,[], Limit, Plan, FinalState, Level).
+plan(State, Goals, Limit, Plan, FinalState ) :-
+   plan(State, Goals,[], Limit, Plan, FinalState, 0).
 
 plan(State, Goals, _, Limit, [], State, Level ) :-
    Limit >= 0, 
@@ -50,7 +50,7 @@ plan(InitState, Goals, AchievedGoals, Limit, Plan, FinalState, Level) :-
    writeInLine(Level+2, ['Wykonanie tej akcji wymaga spełnienia warunku ',Conditions,' oraz celów ',CondGoals]),
 
    writeInLine(Level+2, ['Próba ustalenia preplanu']),
-   plan(InitState, CondGoals, LimitPre, PrePlan, State1, Level+4),
+   plan(InitState, CondGoals, [],  LimitPre, PrePlan, State1, Level+4),
    writeInLine(Level+2, ['Wyjściowy preplan: ',PrePlan,' stan po wykonaniu preplanu ',State1]),
 
 
@@ -75,7 +75,7 @@ plan(InitState, Goals, AchievedGoals, Limit, Plan, FinalState, Level) :-
    conc(PrePlan, [ InstAction | PostPlan ], Plan) .
 
 
-plan(State, Goals, _, Limit, [], State, Level ) :-
+plan(State, _, _, _, [], State, Level ) :-
    writeInLine(Level, ['Limit rekurencji przekroczony. NAWRÓT']), fail.
 
 % procedura pomocnicza do konkatenacji listy
@@ -86,6 +86,7 @@ conc( [X|L1], L2, [X|L3]) :-
 % procedura pomocnicza contains(Elem, Lista) - sprawdza czy Elem znajduje się w Lista
 contains( Lista, Elem) :- conc(_, [Elem|_], Lista).
 
+containsAny( [], _).
 containsAny( ListToSearchiInto, [Elem|_]) :-
    contains( ListToSearchiInto, Elem).
 containsAny( ListToSearchiInto, [_|Rest]) :-
